@@ -1,33 +1,60 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Scan, Camera } from "lucide-react";
+import { Scan, Camera, PackageCheck } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useCamera } from "@/hooks/useCamera";
+import { Product } from "@/types/product";
 
 const ScannerPage = () => {
   const [barcode, setBarcode] = useState("");
   const [scanning, setScanning] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
+  const [scannedProduct, setScannedProduct] = useState<Product | null>(null);
   const { stream, startCamera, stopCamera } = useCamera();
   const { toast } = useToast();
 
-  const handleScan = (e: React.FormEvent) => {
+  const handleScan = async (e: React.FormEvent) => {
     e.preventDefault();
     setScanning(true);
     
-    // Simulate scanning process
-    setTimeout(() => {
-      setScanning(false);
+    try {
+      // Simulate API call to verify barcode against inventory
+      const response = await fetch(`/api/inventory/verify/${barcode}`);
+      const data = await response.json();
+      
+      setScannedProduct(data.product);
       toast({
-        title: "Scan Complete",
-        description: `Barcode ${barcode} has been processed`,
+        title: "Product Scanned",
+        description: `${data.product?.name || 'Unknown product'} (SKU: ${barcode})`,
         duration: 3000,
       });
+
+      // Update inventory count
+      if (data.product) {
+        await fetch('/api/inventory/update', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            sku: barcode,
+            action: 'scan',
+          }),
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Scan Error",
+        description: "Failed to verify product. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setScanning(false);
       setBarcode("");
-    }, 1500);
+    }
   };
 
   const handleCameraToggle = async () => {
@@ -40,12 +67,29 @@ const ScannerPage = () => {
     }
   };
 
+  // Simulated barcode detection from camera feed
+  useEffect(() => {
+    if (showCamera && stream) {
+      const checkBarcode = setInterval(() => {
+        // In a real implementation, this would use a barcode detection library
+        // For now, we'll just simulate random successful scans
+        if (Math.random() < 0.1) { // 10% chance of "detecting" a barcode
+          const mockBarcode = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
+          setBarcode(mockBarcode);
+          handleScan(new Event('submit') as any);
+        }
+      }, 1000);
+
+      return () => clearInterval(checkBarcode);
+    }
+  }, [showCamera, stream]);
+
   return (
     <div className="container pt-20 pb-8 animate-fadeIn">
       <div className="mb-8">
-        <h2 className="text-2xl font-semibold mb-2">Barcode Scanner</h2>
+        <h2 className="text-2xl font-semibold mb-2">Inventory Scanner</h2>
         <p className="text-gray-600">
-          Scan products to update inventory and track discrepancies
+          Scan products to verify inventory and reduce RTO discrepancies
         </p>
       </div>
 
@@ -105,6 +149,20 @@ const ScannerPage = () => {
                     </p>
                   </div>
                 )}
+              </div>
+            )}
+
+            {scannedProduct && (
+              <div className="mt-4 p-4 bg-green-50 rounded-lg">
+                <div className="flex items-center">
+                  <PackageCheck className="w-5 h-5 text-green-500 mr-2" />
+                  <div>
+                    <h4 className="font-medium">{scannedProduct.name}</h4>
+                    <p className="text-sm text-gray-600">
+                      SKU: {scannedProduct.sku} | Stock: {scannedProduct.stock}
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
           </div>
