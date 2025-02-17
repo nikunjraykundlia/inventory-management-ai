@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +15,7 @@ import { useCamera } from "@/hooks/useCamera";
 import { demoProducts } from "@/utils/demoData";
 import { Product, ProductFormData } from "@/types/product";
 import { useToast } from "@/components/ui/use-toast";
+import { calculateRTORisk } from "@/utils/demoData";
 
 const InventoryPage = () => {
   const [products, setProducts] = useState<Product[]>(demoProducts);
@@ -41,29 +41,17 @@ const InventoryPage = () => {
     }
   };
 
-  const calculateRTORisk = (product: ProductFormData): 'low' | 'medium' | 'high' => {
-    // Simple prediction based on averages from demo data
-    const similarProducts = products.filter(p => 
-      Math.abs(p.price - product.price) < 1000
-    );
-    
-    if (similarProducts.length === 0) return 'medium';
-    
-    const avgSuccessRate = similarProducts.reduce((acc, p) => acc + p.deliverySuccessRate, 0) / similarProducts.length;
-    return avgSuccessRate > 85 ? 'low' : avgSuccessRate > 75 ? 'medium' : 'high';
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const rtoRisk = calculateRTORisk(formData);
+    const prediction = calculateRTORisk(products, formData);
     
     const newProduct: Product = {
       id: editingProduct?.id || products.length + 1,
       ...formData,
       lastRestocked: new Date().toISOString(),
       returnsCount: 0,
-      deliverySuccessRate: rtoRisk === 'low' ? 90 : rtoRisk === 'medium' ? 80 : 70,
-      rtoRisk,
+      deliverySuccessRate: prediction.deliverySuccessRate,
+      rtoRisk: prediction.rtoRisk,
       aging: 0,
     };
 
@@ -71,13 +59,13 @@ const InventoryPage = () => {
       setProducts(products.map(p => p.id === editingProduct.id ? newProduct : p));
       toast({
         title: "Product Updated",
-        description: `${newProduct.name} has been updated with RTO risk: ${rtoRisk}`,
+        description: `${newProduct.name} has been updated with RTO risk: ${prediction.rtoRisk}`,
       });
     } else {
       setProducts([...products, newProduct]);
       toast({
         title: "Product Added",
-        description: `${newProduct.name} has been added with RTO risk: ${rtoRisk}`,
+        description: `${newProduct.name} has been added with RTO risk: ${prediction.rtoRisk}`,
       });
     }
 
