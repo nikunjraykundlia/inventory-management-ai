@@ -1,4 +1,3 @@
-
 import { Product } from '../types/product';
 
 const generateDemoProducts = (): Product[] => {
@@ -6,19 +5,17 @@ const generateDemoProducts = (): Product[] => {
   const names = ['Shirt', 'Pants', 'Shoes', 'Watch', 'Bag'];
   const categories = ['Classic', 'Premium', 'Sport', 'Casual', 'Luxury'];
 
-  // Generate seasonal patterns for RTO risk
   const seasonalPattern = (day: number): number => {
     return 75 + 15 * Math.sin(day * Math.PI / 180) + Math.random() * 5;
   };
 
-  // Price-based patterns
   const getPriceBasedRisk = (price: number): number => {
     if (price < 1000) return 80 + Math.random() * 10;
     if (price > 5000) return 70 + Math.random() * 15;
     return 75 + Math.random() * 12;
   };
 
-  for (let i = 1; i <= 200; i++) { // Increased to 200 products
+  for (let i = 1; i <= 200; i++) {
     const name = `${categories[Math.floor(Math.random() * categories.length)]} ${
       names[Math.floor(Math.random() * names.length)]
     }`;
@@ -52,38 +49,72 @@ const generateDemoProducts = (): Product[] => {
   return products;
 };
 
-// Helper function to calculate RTO risk based on product attributes
-export const calculateRTORisk = (products: Product[], newProduct: Partial<Product>): {
+interface OrderParameters {
+  price: number;
+  addressLength?: number;
+  pincode?: string;
+  orderTime?: Date;
+  previousOrders?: number;
+  previousReturns?: number;
+}
+
+export const calculateRTORisk = (products: Product[], newProduct: Partial<Product>, orderParams?: OrderParameters): {
   rtoRisk: 'low' | 'medium' | 'high';
   deliverySuccessRate: number;
+  riskFactors: { factor: string; impact: number }[];
 } => {
-  // Find similar products by price range
   const similarProducts = products.filter(p => 
     Math.abs(p.price - (newProduct.price || 0)) < 1000
   );
 
-  if (similarProducts.length === 0) {
-    return {
-      rtoRisk: 'medium',
-      deliverySuccessRate: 80
-    };
+  let baseSuccessRate = similarProducts.length > 0 
+    ? similarProducts.reduce((acc, p) => acc + p.deliverySuccessRate, 0) / similarProducts.length
+    : 85;
+
+  const riskFactors: { factor: string; impact: number }[] = [];
+
+  if (orderParams) {
+    const priceImpact = orderParams.price > 5000 ? -5 : orderParams.price > 2000 ? -2 : 0;
+    riskFactors.push({ factor: "Price Range", impact: priceImpact });
+    baseSuccessRate += priceImpact;
+
+    if (orderParams.addressLength) {
+      const addressImpact = orderParams.addressLength < 50 ? -5 : 
+                          orderParams.addressLength > 150 ? -3 : 2;
+      riskFactors.push({ factor: "Address Quality", impact: addressImpact });
+      baseSuccessRate += addressImpact;
+    }
+
+    if (orderParams.previousOrders !== undefined) {
+      const orderHistoryImpact = orderParams.previousOrders === 0 ? -3 :
+                                orderParams.previousOrders > 5 ? 5 : 2;
+      riskFactors.push({ factor: "Order History", impact: orderHistoryImpact });
+      baseSuccessRate += orderHistoryImpact;
+    }
+
+    if (orderParams.previousReturns !== undefined) {
+      const returnsImpact = orderParams.previousReturns > 2 ? -8 :
+                           orderParams.previousReturns > 0 ? -4 : 2;
+      riskFactors.push({ factor: "Returns History", impact: returnsImpact });
+      baseSuccessRate += returnsImpact;
+    }
+
+    if (orderParams.orderTime) {
+      const hour = orderParams.orderTime.getHours();
+      const timeImpact = (hour >= 10 && hour <= 18) ? 2 : -2;
+      riskFactors.push({ factor: "Order Timing", impact: timeImpact });
+      baseSuccessRate += timeImpact;
+    }
   }
 
-  // Calculate weighted average based on price similarity
-  const weightedRates = similarProducts.map(p => ({
-    rate: p.deliverySuccessRate,
-    weight: 1 / (Math.abs(p.price - (newProduct.price || 0)) + 1)
-  }));
+  baseSuccessRate = Math.min(Math.max(baseSuccessRate, 50), 98);
 
-  const totalWeight = weightedRates.reduce((acc, curr) => acc + curr.weight, 0);
-  const deliverySuccessRate = weightedRates.reduce(
-    (acc, curr) => acc + (curr.rate * curr.weight), 
-    0
-  ) / totalWeight;
+  const rtoRisk = baseSuccessRate > 85 ? 'low' : baseSuccessRate > 75 ? 'medium' : 'high';
 
   return {
-    deliverySuccessRate,
-    rtoRisk: deliverySuccessRate > 85 ? 'low' : deliverySuccessRate > 75 ? 'medium' : 'high'
+    rtoRisk,
+    deliverySuccessRate: baseSuccessRate,
+    riskFactors
   };
 };
 

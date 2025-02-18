@@ -45,7 +45,17 @@ const InventoryPage = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const prediction = calculateRTORisk(products, formData);
+    
+    // Simulate order parameters (in a real app, these would come from actual order data)
+    const orderParams = {
+      price: formData.price,
+      addressLength: 100, // Example address length
+      orderTime: new Date(),
+      previousOrders: Math.floor(Math.random() * 5), // Simulated previous orders
+      previousReturns: Math.floor(Math.random() * 2), // Simulated previous returns
+    };
+
+    const prediction = calculateRTORisk(products, formData, orderParams);
     
     const newProduct: Product = {
       id: editingProduct?.id || products.length + 1,
@@ -63,14 +73,38 @@ const InventoryPage = () => {
       setProducts(updatedProducts);
       toast({
         title: "Product Updated",
-        description: `${newProduct.name} has been updated with RTO risk: ${prediction.rtoRisk}`,
+        description: (
+          <div className="space-y-2">
+            <p>RTO Risk Level: {prediction.rtoRisk.toUpperCase()}</p>
+            <p>Success Rate: {prediction.deliverySuccessRate.toFixed(1)}%</p>
+            <div className="text-sm">
+              {prediction.riskFactors.map((factor, i) => (
+                <p key={i}>
+                  {factor.factor}: {factor.impact > 0 ? "+" : ""}{factor.impact}%
+                </p>
+              ))}
+            </div>
+          </div>
+        ),
       });
     } else {
       updatedProducts = [...products, newProduct];
       setProducts(updatedProducts);
       toast({
         title: "Product Added",
-        description: `${newProduct.name} has been added with RTO risk: ${prediction.rtoRisk}`,
+        description: (
+          <div className="space-y-2">
+            <p>RTO Risk Level: {prediction.rtoRisk.toUpperCase()}</p>
+            <p>Success Rate: {prediction.deliverySuccessRate.toFixed(1)}%</p>
+            <div className="text-sm">
+              {prediction.riskFactors.map((factor, i) => (
+                <p key={i}>
+                  {factor.factor}: {factor.impact > 0 ? "+" : ""}{factor.impact}%
+                </p>
+              ))}
+            </div>
+          </div>
+        ),
       });
     }
 
