@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +10,8 @@ import {
   Plus,
   Camera,
   Edit,
-  X,
+  TrendingUp,
+  Clock,
 } from "lucide-react";
 import { useCamera } from "@/hooks/useCamera";
 import { demoProducts } from "@/utils/demoData";
@@ -89,6 +91,13 @@ const InventoryPage = () => {
     });
   };
 
+  const getAgingStatus = (days: number) => {
+    if (days <= 30) return { label: "Fresh", color: "text-green-500" };
+    if (days <= 60) return { label: "Moderate", color: "text-yellow-500" };
+    if (days <= 90) return { label: "Aging", color: "text-orange-500" };
+    return { label: "Critical", color: "text-red-500" };
+  };
+
   return (
     <div className="container pt-20 pb-8 animate-fadeIn">
       <div className="mb-8">
@@ -159,7 +168,7 @@ const InventoryPage = () => {
       <div className="grid gap-6">
         {products.map((product) => (
           <Card key={product.id} className="p-6">
-            <div className="flex items-center justify-between">
+            <div className="grid md:grid-cols-2 gap-6">
               <div className="flex items-center space-x-4">
                 <Package className="w-8 h-8 text-gray-400" />
                 <div>
@@ -169,15 +178,16 @@ const InventoryPage = () => {
                   </p>
                 </div>
               </div>
-              <div className="flex items-center space-x-2">
+              
+              <div className="flex items-center justify-between md:justify-end space-x-4">
                 <Badge
                   variant="outline"
                   className={`${
                     product.rtoRisk === "high"
-                      ? "border-warning text-warning"
+                      ? "border-destructive text-destructive"
                       : product.rtoRisk === "medium"
                       ? "border-orange-500 text-orange-500"
-                      : "border-success text-success"
+                      : "border-green-500 text-green-500"
                   }`}
                 >
                   {product.rtoRisk.toUpperCase()} RTO Risk
@@ -187,9 +197,24 @@ const InventoryPage = () => {
                 </Button>
               </div>
             </div>
-            <div className="mt-4 flex items-center text-sm text-gray-500">
-              <AlertTriangle className="w-4 h-4 mr-2" />
-              Aging: {product.aging} days | Success Rate: {product.deliverySuccessRate.toFixed(1)}%
+
+            <div className="mt-4 grid md:grid-cols-3 gap-4">
+              <div className="flex items-center space-x-2 text-sm">
+                <Clock className="w-4 h-4" />
+                <span className={getAgingStatus(product.aging).color}>
+                  {getAgingStatus(product.aging).label} ({product.aging} days)
+                </span>
+              </div>
+              
+              <div className="flex items-center space-x-2 text-sm">
+                <TrendingUp className="w-4 h-4" />
+                <span>Success Rate: {product.deliverySuccessRate.toFixed(1)}%</span>
+              </div>
+
+              <div className="flex items-center space-x-2 text-sm">
+                <AlertTriangle className="w-4 h-4" />
+                <span>Returns: {product.returnsCount}</span>
+              </div>
             </div>
           </Card>
         ))}
