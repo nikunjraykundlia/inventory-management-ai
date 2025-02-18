@@ -55,19 +55,25 @@ const InventoryPage = () => {
       aging: 0,
     };
 
+    let updatedProducts: Product[];
     if (editingProduct) {
-      setProducts(products.map(p => p.id === editingProduct.id ? newProduct : p));
+      updatedProducts = products.map(p => p.id === editingProduct.id ? newProduct : p);
+      setProducts(updatedProducts);
       toast({
         title: "Product Updated",
         description: `${newProduct.name} has been updated with RTO risk: ${prediction.rtoRisk}`,
       });
     } else {
-      setProducts([...products, newProduct]);
+      updatedProducts = [...products, newProduct];
+      setProducts(updatedProducts);
       toast({
         title: "Product Added",
         description: `${newProduct.name} has been added with RTO risk: ${prediction.rtoRisk}`,
       });
     }
+
+    localStorage.setItem('inventory', JSON.stringify(updatedProducts));
+    window.dispatchEvent(new Event('storage'));
 
     setFormData({ name: "", sku: "", stock: 0, price: 0 });
     setEditingProduct(null);
