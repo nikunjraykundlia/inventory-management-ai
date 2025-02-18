@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Scan, Camera, PackageCheck } from "lucide-react";
+import { Scan, Camera, PackageCheck, Upload } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useCamera } from "@/hooks/useCamera";
 import { Product } from "@/types/product";
@@ -67,6 +67,39 @@ const ScannerPage = () => {
     }
   };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check if the file is an image
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid File",
+        description: "Please upload an image file containing a barcode.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setScanning(true);
+    try {
+      // In a real implementation, this would use a barcode detection library
+      // For demo purposes, we'll simulate a successful scan after a delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const mockBarcode = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
+      setBarcode(mockBarcode);
+      handleScan(new Event('submit') as any);
+    } catch (error) {
+      toast({
+        title: "Upload Error",
+        description: "Failed to process the barcode image. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setScanning(false);
+    }
+  };
+
   // Simulated barcode detection from camera feed
   useEffect(() => {
     if (showCamera && stream) {
@@ -110,16 +143,35 @@ const ScannerPage = () => {
               </Button>
             </div>
 
-            <div className="flex justify-center">
+            <div className="flex justify-between space-x-2">
               <Button 
                 type="button" 
                 variant="outline" 
                 onClick={handleCameraToggle}
-                className="w-full"
+                className="flex-1"
               >
                 <Camera className="w-4 h-4 mr-2" />
                 {showCamera ? "Stop Camera" : "Start Camera"}
               </Button>
+
+              <div className="relative flex-1">
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  id="barcode-upload"
+                />
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => document.getElementById('barcode-upload')?.click()}
+                  className="w-full"
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload Barcode
+                </Button>
+              </div>
             </div>
 
             {showCamera && stream ? (
