@@ -10,6 +10,8 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
+  BarChart,
+  Bar,
 } from "recharts";
 import { demoProducts } from "@/utils/demoData";
 import { Product } from "@/types/product";
@@ -17,10 +19,12 @@ import { Product } from "@/types/product";
 const RTOPredictionPage = () => {
   const [products, setProducts] = useState<Product[]>(demoProducts);
   const [rtoTrends, setRtoTrends] = useState<any[]>([]);
+  const [agingAnalysis, setAgingAnalysis] = useState<any[]>([]);
 
-  // Calculate RTO trends from products
+  // Calculate RTO trends and aging analysis from products
   useEffect(() => {
-    const calculateTrends = () => {
+    const calculateAnalytics = () => {
+      // Monthly RTO Trends
       const monthlyData: { [key: string]: { count: number; rtoCount: number } } = {};
       
       products.forEach(product => {
@@ -32,10 +36,29 @@ const RTOPredictionPage = () => {
         }
         
         monthlyData[monthKey].count++;
-        // Calculate RTO count based on deliverySuccessRate
         const rtoCount = (100 - product.deliverySuccessRate) / 100;
         monthlyData[monthKey].rtoCount += rtoCount;
       });
+
+      // Calculate aging analysis
+      const agingGroups = {
+        '0-30': 0,
+        '31-60': 0,
+        '61-90': 0,
+        '90+': 0
+      };
+
+      products.forEach(product => {
+        if (product.aging <= 30) agingGroups['0-30']++;
+        else if (product.aging <= 60) agingGroups['31-60']++;
+        else if (product.aging <= 90) agingGroups['61-90']++;
+        else agingGroups['90+']++;
+      });
+
+      setAgingAnalysis(Object.entries(agingGroups).map(([range, count]) => ({
+        range,
+        count
+      })));
 
       const trends = Object.entries(monthlyData)
         .map(([date, data]) => ({
@@ -48,15 +71,34 @@ const RTOPredictionPage = () => {
       setRtoTrends(trends);
     };
 
-    calculateTrends();
+    calculateAnalytics();
   }, [products]);
 
-  const parameters = [
-    "Previous Order History",
-    "Product Price Range",
-    "Seasonal Patterns",
-    "Category Performance",
-    "Delivery Success Rate"
+  const predictiveParameters = [
+    {
+      name: "Previous Order History",
+      description: "Analysis of customer's past order behavior"
+    },
+    {
+      name: "Delivery Location",
+      description: "Pincode-based delivery success patterns"
+    },
+    {
+      name: "Order Value",
+      description: "Correlation between order value and RTO probability"
+    },
+    {
+      name: "Order Timing",
+      description: "Time and day of order placement"
+    },
+    {
+      name: "Address Quality",
+      description: "Completeness and accuracy of delivery address"
+    },
+    {
+      name: "Address Length",
+      description: "Character count and detail level of address"
+    }
   ];
 
   // Listen for product updates from localStorage
@@ -77,11 +119,11 @@ const RTOPredictionPage = () => {
       <div className="mb-8">
         <h2 className="text-2xl font-semibold mb-2">RTO Prediction Model</h2>
         <p className="text-gray-600">
-          Real-time RTO analysis and prediction based on inventory data
+          Advanced RTO prediction based on multiple parameters and historical data analysis
         </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2">
         <Card className="p-6">
           <h3 className="text-lg font-medium mb-4">RTO Trend Analysis</h3>
           <div className="h-[300px]">
@@ -128,33 +170,60 @@ const RTOPredictionPage = () => {
         </Card>
 
         <Card className="p-6">
-          <h3 className="text-lg font-medium mb-4">Model Parameters</h3>
-          <div className="space-y-4">
-            {parameters.map((param) => (
+          <h3 className="text-lg font-medium mb-4">Inventory Aging Analysis</h3>
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={agingAnalysis}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="range" />
+                <YAxis label={{ value: 'Number of Products', angle: -90, position: 'insideLeft' }} />
+                <Tooltip />
+                <Bar dataKey="count" fill="#2563EB" name="Products" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+
+        <Card className="p-6 lg:col-span-2">
+          <h3 className="text-lg font-medium mb-4">Predictive Parameters</h3>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {predictiveParameters.map((param) => (
               <div
-                key={param}
-                className="flex items-center p-3 bg-gray-50 rounded-lg"
+                key={param.name}
+                className="p-4 bg-gray-50 rounded-lg space-y-2"
               >
-                <div className="w-2 h-2 bg-blue-500 rounded-full mr-3" />
-                <span>{param}</span>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                  <h4 className="font-medium">{param.name}</h4>
+                </div>
+                <p className="text-sm text-gray-600 pl-4">{param.description}</p>
               </div>
             ))}
           </div>
           
           <div className="mt-6 p-4 bg-blue-50 rounded-lg">
             <h4 className="font-medium mb-2">Current Statistics</h4>
-            <div className="space-y-2 text-sm">
-              <p>Total Products: {products.length}</p>
-              <p>Average RTO Rate: {
-                (products.reduce((acc, p) => acc + (100 - p.deliverySuccessRate), 0) / products.length).toFixed(1)
-              }%</p>
-              <p>Products Added This Month: {
-                products.filter(p => {
-                  const date = new Date(p.lastRestocked);
-                  const now = new Date();
-                  return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
-                }).length
-              }</p>
+            <div className="grid gap-4 md:grid-cols-3">
+              <div>
+                <p className="text-sm text-gray-600">Total Products</p>
+                <p className="text-xl font-semibold">{products.length}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Average RTO Rate</p>
+                <p className="text-xl font-semibold">
+                  {(products.reduce((acc, p) => acc + (100 - p.deliverySuccessRate), 0) / products.length).toFixed(1)}%
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Products Added This Month</p>
+                <p className="text-xl font-semibold">
+                  {products.filter(p => {
+                    const date = new Date(p.lastRestocked);
+                    const now = new Date();
+                    return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+                  }).length}
+                </p>
+              </div>
             </div>
           </div>
         </Card>
