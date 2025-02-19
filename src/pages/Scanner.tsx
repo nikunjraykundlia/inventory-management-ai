@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -77,11 +78,20 @@ const ScannerPage = () => {
     setScanning(true);
     try {
       // In a real implementation, this would use a barcode detection library
-      // For demo purposes, we'll simulate a successful scan after a delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      const mockBarcode = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
-      setBarcode(mockBarcode);
-      handleScan(new Event('submit') as any);
+      // For demo purposes, we'll simulate reading the barcode from the uploaded image
+      const storedProducts = JSON.parse(localStorage.getItem('inventory') || '[]');
+      const randomProduct = storedProducts[Math.floor(Math.random() * storedProducts.length)];
+      
+      if (randomProduct) {
+        setBarcode(randomProduct.sku);
+        handleScan(new Event('submit') as any);
+      } else {
+        toast({
+          title: "No Products Found",
+          description: "No products are registered in the inventory.",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       toast({
         title: "Upload Error",
@@ -97,11 +107,13 @@ const ScannerPage = () => {
   useEffect(() => {
     if (showCamera && stream) {
       const checkBarcode = setInterval(() => {
-        // In a real implementation, this would use a barcode detection library
-        // For now, we'll just simulate random successful scans
-        if (Math.random() < 0.1) { // 10% chance of "detecting" a barcode
-          const mockBarcode = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
-          setBarcode(mockBarcode);
+        // Get products from localStorage for simulation
+        const storedProducts = JSON.parse(localStorage.getItem('inventory') || '[]');
+        
+        if (storedProducts.length > 0 && Math.random() < 0.1) { // 10% chance of "detecting" a barcode
+          // Randomly select a product from inventory for simulation
+          const randomProduct = storedProducts[Math.floor(Math.random() * storedProducts.length)];
+          setBarcode(randomProduct.sku);
           handleScan(new Event('submit') as any);
         }
       }, 1000);
