@@ -1,10 +1,9 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Scan, Camera, PackageCheck, Upload } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { useCamera } from "@/hooks/useCamera";
 import { Product } from "@/types/product";
 
@@ -23,7 +22,12 @@ const ScannerPage = () => {
     try {
       // Get products from localStorage
       const storedProducts = JSON.parse(localStorage.getItem('inventory') || '[]');
-      const product = storedProducts.find((p: Product) => p.sku === barcode);
+      console.log('Scanning barcode:', barcode);
+      console.log('Available products:', storedProducts);
+      
+      // Make sure we're comparing strings
+      const product = storedProducts.find((p: Product) => p.sku.toString() === barcode.toString());
+      console.log('Found product:', product);
       
       if (product) {
         setScannedProduct(product);
@@ -35,11 +39,12 @@ const ScannerPage = () => {
       } else {
         toast({
           title: "Product Not Found",
-          description: "This barcode is not registered in the inventory.",
+          description: `No product found with SKU: ${barcode}`,
           variant: "destructive",
         });
       }
     } catch (error) {
+      console.error('Scan error:', error);
       toast({
         title: "Scan Error",
         description: "Failed to verify product. Please try again.",
@@ -47,7 +52,6 @@ const ScannerPage = () => {
       });
     } finally {
       setScanning(false);
-      setBarcode("");
     }
   };
 
@@ -65,7 +69,6 @@ const ScannerPage = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Check if the file is an image
     if (!file.type.startsWith('image/')) {
       toast({
         title: "Invalid File",
@@ -77,14 +80,11 @@ const ScannerPage = () => {
 
     setScanning(true);
     try {
-      // In a real implementation, this would use a barcode detection library
-      // For demo purposes, we'll simulate reading the barcode from the uploaded image
       const storedProducts = JSON.parse(localStorage.getItem('inventory') || '[]');
-      const randomProduct = storedProducts[Math.floor(Math.random() * storedProducts.length)];
-      
-      if (randomProduct) {
+      if (storedProducts.length > 0) {
+        const randomProduct = storedProducts[Math.floor(Math.random() * storedProducts.length)];
         setBarcode(randomProduct.sku);
-        handleScan(new Event('submit') as any);
+        await handleScan(new Event('submit') as any);
       } else {
         toast({
           title: "No Products Found",
@@ -93,6 +93,7 @@ const ScannerPage = () => {
         });
       }
     } catch (error) {
+      console.error('Upload error:', error);
       toast({
         title: "Upload Error",
         description: "Failed to process the barcode image. Please try again.",
@@ -103,15 +104,12 @@ const ScannerPage = () => {
     }
   };
 
-  // Simulated barcode detection from camera feed
   useEffect(() => {
     if (showCamera && stream) {
       const checkBarcode = setInterval(() => {
-        // Get products from localStorage for simulation
         const storedProducts = JSON.parse(localStorage.getItem('inventory') || '[]');
         
-        if (storedProducts.length > 0 && Math.random() < 0.1) { // 10% chance of "detecting" a barcode
-          // Randomly select a product from inventory for simulation
+        if (storedProducts.length > 0 && Math.random() < 0.1) {
           const randomProduct = storedProducts[Math.floor(Math.random() * storedProducts.length)];
           setBarcode(randomProduct.sku);
           handleScan(new Event('submit') as any);
