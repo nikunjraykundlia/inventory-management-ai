@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,28 +20,22 @@ const ScannerPage = () => {
     setScanning(true);
     
     try {
-      // Simulate API call to verify barcode against inventory
-      const response = await fetch(`/api/inventory/verify/${barcode}`);
-      const data = await response.json();
+      // Get products from localStorage
+      const storedProducts = JSON.parse(localStorage.getItem('inventory') || '[]');
+      const product = storedProducts.find((p: Product) => p.sku === barcode);
       
-      setScannedProduct(data.product);
-      toast({
-        title: "Product Scanned",
-        description: `${data.product?.name || 'Unknown product'} (SKU: ${barcode})`,
-        duration: 3000,
-      });
-
-      // Update inventory count
-      if (data.product) {
-        await fetch('/api/inventory/update', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            sku: barcode,
-            action: 'scan',
-          }),
+      if (product) {
+        setScannedProduct(product);
+        toast({
+          title: "Product Found",
+          description: `${product.name} (SKU: ${barcode})`,
+          duration: 3000,
+        });
+      } else {
+        toast({
+          title: "Product Not Found",
+          description: "This barcode is not registered in the inventory.",
+          variant: "destructive",
         });
       }
     } catch (error) {

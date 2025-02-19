@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,6 +11,8 @@ import {
   Edit,
   TrendingUp,
   Clock,
+  ArrowUpCircle,
+  ArrowDownCircle,
 } from "lucide-react";
 import { useCamera } from "@/hooks/useCamera";
 import { demoProducts } from "@/utils/demoData";
@@ -20,7 +21,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { calculateRTORisk } from "@/utils/demoData";
 
 const InventoryPage = () => {
-  const [products, setProducts] = useState<Product[]>(demoProducts);
+  const [products, setProducts] = useState<Product[]>([]);
   const [showCamera, setShowCamera] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [formData, setFormData] = useState<ProductFormData>({
@@ -32,6 +33,22 @@ const InventoryPage = () => {
   
   const { stream, startCamera, stopCamera } = useCamera();
   const { toast } = useToast();
+
+  useEffect(() => {
+    const storedProducts = localStorage.getItem('inventory');
+    if (storedProducts) {
+      setProducts(JSON.parse(storedProducts));
+    } else {
+      setProducts(demoProducts);
+      localStorage.setItem('inventory', JSON.stringify(demoProducts));
+    }
+  }, []);
+
+  const rtoAnalytics = {
+    high: products.filter(p => p.rtoRisk === 'high').length,
+    medium: products.filter(p => p.rtoRisk === 'medium').length,
+    low: products.filter(p => p.rtoRisk === 'low').length,
+  };
 
   const handleCameraToggle = async () => {
     if (showCamera) {
@@ -46,13 +63,12 @@ const InventoryPage = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Simulate order parameters (in a real app, these would come from actual order data)
     const orderParams = {
       price: formData.price,
-      addressLength: 100, // Example address length
+      addressLength: 100,
       orderTime: new Date(),
-      previousOrders: Math.floor(Math.random() * 5), // Simulated previous orders
-      previousReturns: Math.floor(Math.random() * 2), // Simulated previous returns
+      previousOrders: Math.floor(Math.random() * 5),
+      previousReturns: Math.floor(Math.random() * 2),
     };
 
     const prediction = calculateRTORisk(products, formData, orderParams);
@@ -109,7 +125,6 @@ const InventoryPage = () => {
     }
 
     localStorage.setItem('inventory', JSON.stringify(updatedProducts));
-    window.dispatchEvent(new Event('storage'));
 
     setFormData({ name: "", sku: "", stock: 0, price: 0 });
     setEditingProduct(null);
@@ -142,6 +157,33 @@ const InventoryPage = () => {
           Monitor stock levels and inventory aging analysis
         </p>
       </div>
+
+      <Card className="p-6 mb-8">
+        <h3 className="text-lg font-semibold mb-4">RTO Risk Distribution</h3>
+        <div className="grid grid-cols-3 gap-4">
+          <div className="flex items-center space-x-2">
+            <ArrowUpCircle className="w-5 h-5 text-red-500" />
+            <div>
+              <p className="text-sm text-gray-600">High Risk</p>
+              <p className="text-xl font-semibold">{rtoAnalytics.high}</p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <AlertTriangle className="w-5 h-5 text-yellow-500" />
+            <div>
+              <p className="text-sm text-gray-600">Medium Risk</p>
+              <p className="text-xl font-semibold">{rtoAnalytics.medium}</p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <ArrowDownCircle className="w-5 h-5 text-green-500" />
+            <div>
+              <p className="text-sm text-gray-600">Low Risk</p>
+              <p className="text-xl font-semibold">{rtoAnalytics.low}</p>
+            </div>
+          </div>
+        </div>
+      </Card>
 
       <Card className="p-6 mb-8">
         <form onSubmit={handleSubmit} className="space-y-4">
