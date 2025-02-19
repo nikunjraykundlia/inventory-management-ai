@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -60,8 +61,22 @@ const InventoryPage = () => {
     }
   };
 
+  const isSkuUnique = (sku: string, excludeProductId?: number): boolean => {
+    return !products.some(p => p.sku === sku && p.id !== excludeProductId);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check for unique SKU
+    if (!isSkuUnique(formData.sku, editingProduct?.id)) {
+      toast({
+        title: "Invalid SKU",
+        description: "This SKU already exists. Please use a unique SKU number.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     const orderParams = {
       price: formData.price,
@@ -74,7 +89,7 @@ const InventoryPage = () => {
     const prediction = calculateRTORisk(products, formData, orderParams);
     
     const newProduct: Product = {
-      id: editingProduct?.id || products.length + 1,
+      id: editingProduct?.id || Math.max(...products.map(p => p.id), 0) + 1,
       ...formData,
       lastRestocked: new Date().toISOString(),
       returnsCount: 0,
@@ -125,7 +140,6 @@ const InventoryPage = () => {
     }
 
     localStorage.setItem('inventory', JSON.stringify(updatedProducts));
-
     setFormData({ name: "", sku: "", stock: 0, price: 0 });
     setEditingProduct(null);
   };
