@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,12 +13,14 @@ import {
   Clock,
   ArrowUpCircle,
   ArrowDownCircle,
+  Download,
 } from "lucide-react";
 import { useCamera } from "@/hooks/useCamera";
 import { demoProducts } from "@/utils/demoData";
 import { Product, ProductFormData } from "@/types/product";
 import { useToast } from "@/components/ui/use-toast";
 import { calculateRTORisk } from "@/utils/demoData";
+import JsBarcode from "jsbarcode";
 
 const InventoryPage = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -34,6 +35,26 @@ const InventoryPage = () => {
   
   const { stream, startCamera, stopCamera } = useCamera();
   const { toast } = useToast();
+
+  const generateBarcode = (sku: string) => {
+    const canvas = document.createElement('canvas');
+    JsBarcode(canvas, sku, {
+      format: "CODE128",
+      width: 2,
+      height: 100,
+      displayValue: true
+    });
+    return canvas.toDataURL('image/png');
+  };
+
+  const downloadBarcode = (sku: string, productName: string) => {
+    const link = document.createElement('a');
+    link.download = `barcode-${sku}-${productName}.png`;
+    link.href = generateBarcode(sku);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   useEffect(() => {
     const storedProducts = localStorage.getItem('inventory');
@@ -68,7 +89,6 @@ const InventoryPage = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Check for unique SKU
     if (!isSkuUnique(formData.sku, editingProduct?.id)) {
       toast({
         title: "Invalid SKU",
@@ -136,6 +156,25 @@ const InventoryPage = () => {
             </div>
           </div>
         ),
+      });
+
+      const barcodeUrl = generateBarcode(newProduct.sku);
+      toast({
+        title: "Barcode Generated",
+        description: (
+          <div className="space-y-2">
+            <img src={barcodeUrl} alt={`Barcode for ${newProduct.sku}`} className="w-full" />
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={() => downloadBarcode(newProduct.sku, newProduct.name)}
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Download Barcode
+            </Button>
+          </div>
+        ),
+        duration: 5000,
       });
     }
 
@@ -282,6 +321,14 @@ const InventoryPage = () => {
                 >
                   {product.rtoRisk.toUpperCase()} RTO Risk
                 </Badge>
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  onClick={() => downloadBarcode(product.sku, product.name)}
+                  title="Download Barcode"
+                >
+                  <Download className="w-4 h-4" />
+                </Button>
                 <Button variant="ghost" size="icon" onClick={() => handleEdit(product)}>
                   <Edit className="w-4 h-4" />
                 </Button>
