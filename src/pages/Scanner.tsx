@@ -34,14 +34,12 @@ const ScannerPage = () => {
     setScanning(true);
     
     try {
-      // Get products from localStorage and ensure barcode is trimmed
       const storedProducts = JSON.parse(localStorage.getItem('inventory') || '[]');
       const cleanBarcode = barcode.trim();
       
       console.log('Scanning barcode:', cleanBarcode);
       console.log('Available products:', storedProducts);
       
-      // Find product by SKU with exact string comparison
       const product = storedProducts.find((p: Product) => 
         String(p.sku).trim() === String(cleanBarcode)
       );
@@ -49,7 +47,6 @@ const ScannerPage = () => {
       console.log('Found product:', product);
       
       if (product) {
-        // Update stock and get updated product
         const updatedProduct = updateProductStock(product);
         setScannedProduct(updatedProduct);
         
@@ -109,7 +106,14 @@ const ScannerPage = () => {
     try {
       const storedProducts = JSON.parse(localStorage.getItem('inventory') || '[]');
       if (storedProducts.length > 0) {
-        const randomProduct = storedProducts[Math.floor(Math.random() * storedProducts.length)];
+        // Get a random index that's different from the current product's index
+        let currentIndex = storedProducts.findIndex((p: Product) => p.sku === barcode);
+        let newIndex;
+        do {
+          newIndex = Math.floor(Math.random() * storedProducts.length);
+        } while (newIndex === currentIndex && storedProducts.length > 1);
+        
+        const randomProduct = storedProducts[newIndex];
         setBarcode(randomProduct.sku);
         await handleScan(new Event('submit') as any);
       } else {
@@ -132,12 +136,22 @@ const ScannerPage = () => {
   };
 
   useEffect(() => {
+    let lastScannedSku = '';
+    
     if (showCamera && stream) {
       const checkBarcode = setInterval(() => {
         const storedProducts = JSON.parse(localStorage.getItem('inventory') || '[]');
         
         if (storedProducts.length > 0 && Math.random() < 0.1) {
-          const randomProduct = storedProducts[Math.floor(Math.random() * storedProducts.length)];
+          // Get a random index that's different from the last scanned SKU
+          let currentIndex = storedProducts.findIndex((p: Product) => p.sku === lastScannedSku);
+          let newIndex;
+          do {
+            newIndex = Math.floor(Math.random() * storedProducts.length);
+          } while (newIndex === currentIndex && storedProducts.length > 1);
+          
+          const randomProduct = storedProducts[newIndex];
+          lastScannedSku = randomProduct.sku;
           setBarcode(randomProduct.sku);
           handleScan(new Event('submit') as any);
         }
