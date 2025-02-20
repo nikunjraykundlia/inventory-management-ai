@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,19 @@ const ScannerPage = () => {
   const { stream, startCamera, stopCamera } = useCamera();
   const { toast } = useToast();
 
+  const updateProductStock = (product: Product) => {
+    const storedProducts = JSON.parse(localStorage.getItem('inventory') || '[]');
+    const updatedProducts = storedProducts.map((p: Product) => {
+      if (p.sku === product.sku) {
+        return { ...p, stock: p.stock + 1 };
+      }
+      return p;
+    });
+    
+    localStorage.setItem('inventory', JSON.stringify(updatedProducts));
+    return updatedProducts.find((p: Product) => p.sku === product.sku);
+  };
+
   const handleScan = async (e: React.FormEvent) => {
     e.preventDefault();
     setScanning(true);
@@ -30,10 +44,18 @@ const ScannerPage = () => {
       console.log('Found product:', product);
       
       if (product) {
-        setScannedProduct(product);
+        // Update stock and get updated product
+        const updatedProduct = updateProductStock(product);
+        setScannedProduct(updatedProduct);
+        
         toast({
-          title: "Product Found",
-          description: `${product.name} (SKU: ${barcode})`,
+          title: "Product Found & Stock Updated",
+          description: (
+            <div className="space-y-1">
+              <p>{updatedProduct.name} (SKU: {barcode})</p>
+              <p className="text-sm text-green-600">Stock increased to: {updatedProduct.stock} units</p>
+            </div>
+          ),
           duration: 3000,
         });
       } else {
