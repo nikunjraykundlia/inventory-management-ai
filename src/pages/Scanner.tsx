@@ -34,13 +34,18 @@ const ScannerPage = () => {
     setScanning(true);
     
     try {
-      // Get products from localStorage
+      // Get products from localStorage and ensure barcode is trimmed
       const storedProducts = JSON.parse(localStorage.getItem('inventory') || '[]');
-      console.log('Scanning barcode:', barcode);
+      const cleanBarcode = barcode.trim();
+      
+      console.log('Scanning barcode:', cleanBarcode);
       console.log('Available products:', storedProducts);
       
-      // Make sure we're comparing strings
-      const product = storedProducts.find((p: Product) => p.sku.toString() === barcode.toString());
+      // Find product by SKU with exact string comparison
+      const product = storedProducts.find((p: Product) => 
+        String(p.sku).trim() === String(cleanBarcode)
+      );
+      
       console.log('Found product:', product);
       
       if (product) {
@@ -52,7 +57,7 @@ const ScannerPage = () => {
           title: "Product Found & Stock Updated",
           description: (
             <div className="space-y-1">
-              <p>{updatedProduct.name} (SKU: {barcode})</p>
+              <p>{updatedProduct.name} (SKU: {cleanBarcode})</p>
               <p className="text-sm text-green-600">Stock increased to: {updatedProduct.stock} units</p>
             </div>
           ),
@@ -61,7 +66,7 @@ const ScannerPage = () => {
       } else {
         toast({
           title: "Product Not Found",
-          description: `No product found with SKU: ${barcode}`,
+          description: `No product found with SKU: ${cleanBarcode}`,
           variant: "destructive",
         });
       }
