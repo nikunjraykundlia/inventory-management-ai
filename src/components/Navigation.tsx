@@ -1,6 +1,6 @@
 
 import { Link, useLocation } from 'react-router-dom';
-import { BarChart, Package, Scan } from 'lucide-react';
+import { BarChart, Package, Scan, TrendingUp } from 'lucide-react';
 
 const Navigation = () => {
   const location = useLocation();
@@ -11,6 +11,7 @@ const Navigation = () => {
     { path: '/', label: 'RTO Prediction', icon: BarChart },
     { path: '/inventory', label: 'Inventory', icon: Package },
     { path: '/scanner', label: 'Scanner', icon: Scan },
+    { path: '/prediction', label: 'Prediction Models', icon: TrendingUp },
   ];
 
   return (

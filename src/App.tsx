@@ -8,6 +8,7 @@ import Navigation from "./components/Navigation";
 import Index from "./pages/Index";
 import Inventory from "./pages/Inventory";
 import Scanner from "./pages/Scanner";
+import Prediction from "./pages/Prediction";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,6 +24,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/inventory" element={<Inventory />} />
           <Route path="/scanner" element={<Scanner />} />
+          <Route path="/prediction" element={<Prediction />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </TooltipProvider>
