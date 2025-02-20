@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -137,21 +136,37 @@ const ScannerPage = () => {
 
   useEffect(() => {
     let lastScannedSku = '';
+    let previousSkus: string[] = [];
     
     if (showCamera && stream) {
       const checkBarcode = setInterval(() => {
         const storedProducts = JSON.parse(localStorage.getItem('inventory') || '[]');
         
         if (storedProducts.length > 0 && Math.random() < 0.1) {
-          // Get a random index that's different from the last scanned SKU
-          let currentIndex = storedProducts.findIndex((p: Product) => p.sku === lastScannedSku);
-          let newIndex;
-          do {
-            newIndex = Math.floor(Math.random() * storedProducts.length);
-          } while (newIndex === currentIndex && storedProducts.length > 1);
+          // Filter out products that were recently scanned
+          const availableProducts = storedProducts.filter(
+            (p: Product) => !previousSkus.includes(p.sku)
+          );
           
-          const randomProduct = storedProducts[newIndex];
+          // Reset previousSkus if we've used all products
+          if (availableProducts.length === 0) {
+            previousSkus = [];
+          }
+          
+          // Get a random product from available products
+          const randomProduct = availableProducts.length > 0 
+            ? availableProducts[Math.floor(Math.random() * availableProducts.length)]
+            : storedProducts[Math.floor(Math.random() * storedProducts.length)];
+          
+          // Update tracking arrays
           lastScannedSku = randomProduct.sku;
+          previousSkus.push(lastScannedSku);
+          
+          // Keep only the last 5 scanned SKUs in memory
+          if (previousSkus.length > 5) {
+            previousSkus.shift();
+          }
+          
           setBarcode(randomProduct.sku);
           handleScan(new Event('submit') as any);
         }
